@@ -3,13 +3,17 @@ import {
   createStoreWithManager,
   getStores,
   updateStoreAndManager,
-  deleteStoreAndManager
+  deleteStoreAndManager,
+  registerAdmin,
+  loginAdmin
 } from '../controllers/adminController.js';
 
 import { protectAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.post('/register', registerAdmin);
+router.post('/login', loginAdmin);
 // CRUD routes for store + manager
 router.post('/stores', protectAdmin, createStoreWithManager);
 router.get('/stores', protectAdmin, getStores);
