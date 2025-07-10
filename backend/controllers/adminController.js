@@ -3,6 +3,7 @@ import Store from '../models/Store.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js'; 
+import Product from '../models/Product.js';
 
 
 // Admin Register
@@ -178,4 +179,9 @@ export const deleteStoreAndManager = async (req, res) => {
   await store.deleteOne();
 
   res.json({ message: 'Store and Manager deleted' });
+};
+
+export const getAllProducts = async (req, res) => {
+  const products = await Product.find().populate('store');
+  res.json(products);
 };

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const returnSchema = new mongoose.Schema({
   customerId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Customer',
     required: true
   },
   packagingType: { type: String, required: true },
@@ -16,7 +16,11 @@ const returnSchema = new mongoose.Schema({
   },
   approvedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'Manager'
+  },
+  storeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Store'
   },
   adminNotes: { type: String }
 }, { timestamps: true });

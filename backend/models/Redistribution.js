@@ -20,7 +20,7 @@ const redistributionSchema = new mongoose.Schema({
   transferDate: { type: Date, default: Date.now },
   approvedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'Admin'
   },
   notes: { type: String }
 }, { timestamps: true });

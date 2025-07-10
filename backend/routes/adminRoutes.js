@@ -5,7 +5,8 @@ import {
   updateStoreAndManager,
   deleteStoreAndManager,
   registerAdmin,
-  loginAdmin
+  loginAdmin,
+  getAllProducts
 } from '../controllers/adminController.js';
 
 import { protectAdmin } from '../middleware/authMiddleware.js';
@@ -19,5 +20,6 @@ router.post('/stores', protectAdmin, createStoreWithManager);
 router.get('/stores', protectAdmin, getStores);
 router.put('/stores/:storeId', protectAdmin, updateStoreAndManager);
 router.delete('/stores/:storeId', protectAdmin, deleteStoreAndManager);
+router.get('/products', protectAdmin, getAllProducts);
 
 export default router;
