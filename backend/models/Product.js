@@ -8,7 +8,7 @@ const productSchema = new mongoose.Schema({
   currentDiscount: { type: Number, default: 0, min: 0, max: 1 },
   status: {
     type: String,
-    enum: ['fresh', 'near-expiry', 'expiring-soon', 'expired'],
+    enum: ['fresh', 'near-expiry', 'expiring-soon', 'expired', 'sold-out'],
     default: 'fresh'
   },
   imageUrl: { type: String, default: 'https://placehold.co/100x100/cccccc/000000?text=Product' },

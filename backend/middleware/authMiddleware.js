@@ -14,7 +14,7 @@ export const protectAdmin = async (req, res, next) => {
 
       const admin = await Admin.findById(decoded.id).select('-password');
 
-      if (admin && decoded.role === 'admin') {
+      if (admin) {
         req.user = admin;
         next();
       } else {
@@ -40,7 +40,7 @@ export const protectManager = async (req, res, next) => {
 
       const manager = await Manager.findById(decoded.id).select('-password');
 
-      if (manager && decoded.role === 'manager') {
+      if (manager) {
         req.user = manager;
         next();
       } else {
@@ -66,7 +66,7 @@ export const protectCustomer = async (req, res, next) => {
 
       const customer = await Customer.findById(decoded.id).select('-password');
 
-      if (customer && decoded.role === 'customer') {
+      if (customer) {
         req.user = customer;
         next();
       } else {

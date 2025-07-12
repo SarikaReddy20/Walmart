@@ -1,6 +1,8 @@
 import Manager from '../models/Manager.js';
 import Store from '../models/Store.js';
 import bcrypt from 'bcryptjs';
+import Admin from '../models/Admin.js';
+import generateToken from '../utils/generateToken.js';
 
 // ✅ Admin: Create store + manager together
 export const createStoreWithManager = async (req, res) => {
@@ -111,4 +113,22 @@ export const deleteStoreAndManager = async (req, res) => {
   await store.deleteOne();
 
   res.json({ message: 'Store and Manager deleted' });
+};
+
+// ✅ Admin: Login
+export const loginAdmin = async (req, res) => {
+  const { email, password } = req.body;
+
+  const admin = await Admin.findOne({ email });
+
+  if (admin && (await bcrypt.compare(password, admin.password))) {
+    res.json({
+      _id: admin._id,
+      fullName: admin.fullName,
+      email: admin.email,
+      token: generateToken(admin._id)
+    });
+  } else {
+    res.status(401).json({ message: 'Invalid credentials' });
+  }
 };

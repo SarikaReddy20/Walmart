@@ -1,8 +1,12 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import connectDB from "./config/db.js"; // Import your DB connection
+import connectDB from "./config/db.js";
 import adminRoutes from './routes/adminRoutes.js';
+import managerRoutes from './routes/managerRoutes.js';
+import customerRoutes from './routes/customerRoutes.js';
+import cron from 'node-cron';
+import updateProductStatusAndDiscounts from "./cron/updateProductStatus.js";
 
 dotenv.config();
 
@@ -15,6 +19,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/api/admin', adminRoutes);
+app.use('/api/manager', managerRoutes);
+// Redistribution endpoints are now included in managerRoutes.js
+app.use('/api/customer', customerRoutes);
+
+// Cron job to update product statuses and discounts every day at midnight
+cron.schedule('0 0 * * *', async () => {
+  console.log('[CRON] Running product status + discount update...');
+  await updateProductStatusAndDiscounts();
+});
 
 // Example root route (can remove later)
 app.get("/", (req, res) => {
