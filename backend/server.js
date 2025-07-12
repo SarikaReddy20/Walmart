@@ -1,3 +1,5 @@
+import cron from"node-cron";
+import updateProductStatusAndDiscounts from "./cron/updateProductStatus.js";
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -34,6 +36,12 @@ app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
+// Run daily at 1am///////////DYNAMIC DISCOUNTS
+cron.schedule("0 1 * * *", async () => {
+  console.log("[CRON] Running daily product update job...");
+  await updateProductStatusAndDiscounts();
+});
+// updateProductStatusAndDiscounts()
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
