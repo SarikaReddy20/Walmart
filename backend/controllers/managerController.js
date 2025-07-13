@@ -6,6 +6,7 @@ import Forecast from '../models/Forecast.js';
 import Return from '../models/Return.js';
 import Customer from '../models/Customer.js';
 import generateToken from '../utils/generateToken.js';
+import Redistribution from '../models/Redistribution.js';
 
 // --- AUTH ---
 
@@ -357,58 +358,73 @@ export const requestRedistribution = async (req, res) => {
 
 export const approveRedistribution = async (req, res) => {
   try {
-    const redistribution = await Redistribution.findById(req.params.id).populate('productId fromStore toStore');
-    if (!redistribution) return res.status(404).json({ message: 'Redistribution not found' });
+    const redistribution = await Redistribution.findById(req.params.id)
+      .populate('productId')
+      .populate('fromStore')
+      .populate('toStore');
 
-    // Validate that the approver really manages the `toStore`
-    const toStore = await Store.findOne({ _id: redistribution.toStore._id, managerId: req.user._id });
-    if (!toStore) return res.status(403).json({ message: 'You are not authorized to approve for this store' });
-
-    // Find product in the toStore
-    const product = await Product.findOne({ _id: redistribution.productId._id, storeId: toStore._id });
-    if (!product) return res.status(404).json({ message: 'Product not found in your store' });
-
-    if (product.stockQuantity < redistribution.quantity) {
-      return res.status(400).json({ message: 'Not enough stock in your store to transfer' });
+    if (!redistribution) {
+      return res.status(404).json({ message: 'Redistribution request not found.' });
     }
 
-    // Deduct stock from toStore
-    product.stockQuantity -= redistribution.quantity;
-    await product.save();
-
-    // Reduce forecast demand in fromStore
-    const forecast = await Forecast.findOne({ productId: product._id, storeId: redistribution.fromStore._id });
-    if (forecast) {
-      // Reduce demand for the nearest date
-      let changed = false;
-      for (const demand of forecast.dailyDemand) {
-        if (demand.predictedUnits >= redistribution.quantity) {
-          demand.predictedUnits -= redistribution.quantity;
-          changed = true;
-          break;
-        }
-      }
-
-      if (!changed && forecast.dailyDemand.length) {
-        forecast.dailyDemand[0].predictedUnits = Math.max(0, forecast.dailyDemand[0].predictedUnits - redistribution.quantity);
-      }
-
-      forecast.dailyDemand = forecast.dailyDemand.filter(d => d.predictedUnits > 0);
-      if (forecast.dailyDemand.length === 0) {
-        await Forecast.findByIdAndDelete(forecast._id);
-      } else {
-        await forecast.save();
-      }
+    // ✔️ Ensure logged-in manager is TO store manager:
+    if (String(redistribution.toStore.managerId) !== String(req.user._id)) {
+      return res.status(403).json({ message: 'Forbidden: You do not manage the TO store.' });
     }
 
-    redistribution.approvedBy = req.user._id;
+    // ✔️ Get product at FROM store
+    const fromProduct = await Product.findOne({
+      _id: redistribution.productId._id,
+      storeId: redistribution.fromStore._id
+    });
+
+    if (!fromProduct) {
+      return res.status(404).json({ message: 'Product not found in FROM store.' });
+    }
+
+    if (fromProduct.stockQuantity < redistribution.quantity) {
+      return res.status(400).json({ message: 'Not enough stock in FROM store.' });
+    }
+
+    // ✔️ Get product at TO store (or create if it doesn’t exist)
+    let toProduct = await Product.findOne({
+      name: fromProduct.name,
+      storeId: redistribution.toStore._id
+    });
+
+    if (!toProduct) {
+      // Optional: auto-create the product in TO store if needed
+      toProduct = new Product({
+        name: fromProduct.name,
+        description: fromProduct.description,
+        price: fromProduct.price,
+        expiryDate: fromProduct.expiryDate,
+        currentDiscount: fromProduct.currentDiscount,
+        status: fromProduct.status,
+        imageUrl: fromProduct.imageUrl,
+        stockQuantity: 0,
+        storeId: redistribution.toStore._id
+      });
+    }
+
+    // ✔️ Perform the transfer
+    fromProduct.stockQuantity -= redistribution.quantity;
+    toProduct.stockQuantity += redistribution.quantity;
+
+    await fromProduct.save();
+    await toProduct.save();
+
+    // ✔️ Mark redistribution as completed
+    redistribution.status = 'approved';
     await redistribution.save();
 
-    res.json({ message: 'Redistribution approved', redistribution });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(200).json({ message: 'Redistribution approved and stock transferred.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 export const rejectRedistribution = async (req, res) => {
   try {
@@ -425,3 +441,38 @@ export const rejectRedistribution = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// GET /api/manager/redistributions/incoming
+export const getIncomingRedistributions = async (req, res) => {
+  try {
+    const myStore = await Store.findOne({ managerId: req.user._id });
+    if (!myStore) return res.status(404).json({ message: 'Store not found' });
+
+    const redistributions = await Redistribution.find({ toStore: myStore._id })
+      .populate('productId fromStore toStore');
+
+    res.json({ redistributions });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// GET /api/manager/forecasts/need
+export const getNeededForecasts = async (req, res) => {
+  try {
+    const myStore = await Store.findOne({ managerId: req.user._id });
+    if (!myStore) return res.status(404).json({ message: 'Your store not found' });
+
+    // Find forecasts where storeId != myStore._id
+    const forecasts = await Forecast.find({ storeId: { $ne: myStore._id } })
+      .populate('productId')
+      .populate('storeId');
+
+    res.json({ forecasts });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
