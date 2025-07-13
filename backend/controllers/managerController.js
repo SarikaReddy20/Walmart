@@ -6,6 +6,7 @@ import Forecast from '../models/Forecast.js';
 import Return from '../models/Return.js';
 import Customer from '../models/Customer.js';
 import generateToken from '../utils/generateToken.js';
+import Redistribution from '../models/Redistribution.js'
 
 // --- AUTH ---
 
@@ -333,19 +334,18 @@ export const reduceForecastDemand = async (req, res) => {
 
 export const requestRedistribution = async (req, res) => {
   try {
-    const { productId, toStoreId, quantity } = req.body;
+    const { productId, fromStoreId, quantity } = req.body; // 🆕 fromStoreId now comes from frontend
 
-    const fromStore = await Store.findOne({ managerId: req.user._id });
-    if (!fromStore) return res.status(404).json({ message: 'Your store not found' });
+    const toStore = await Store.findOne({ managerId: req.user._id }); // 🆕 requester is the needy one
+    if (!toStore) return res.status(404).json({ message: 'Your store not found' });
 
-    // Ensure the toStore exists
-    const toStore = await Store.findById(toStoreId);
-    if (!toStore) return res.status(404).json({ message: 'Target store not found' });
+    const fromStore = await Store.findById(fromStoreId); // 🆕 this is the store being asked to give
+    if (!fromStore) return res.status(404).json({ message: 'From store not found' });
 
     const redistribution = await Redistribution.create({
       productId,
-      fromStore: fromStore._id,
-      toStore: toStore._id,
+      fromStore: fromStore._id, // 🆗 the one expected to approve
+      toStore: toStore._id,     // 🆗 the one in need (requester)
       quantity
     });
 
@@ -355,68 +355,73 @@ export const requestRedistribution = async (req, res) => {
   }
 };
 
+
 export const approveRedistribution = async (req, res) => {
   try {
-    const redistribution = await Redistribution.findById(req.params.id).populate('productId fromStore toStore');
-    if (!redistribution) return res.status(404).json({ message: 'Redistribution not found' });
+    const redistribution = await Redistribution.findById(req.params.id)
+      .populate('productId toStore')
+      .populate({
+        path: 'fromStore',
+        populate: {
+          path: 'managerId',
+          select: '_id name email'
+        }
+      });
 
-    // Validate that the approver really manages the `toStore`
-    const toStore = await Store.findOne({ _id: redistribution.toStore._id, managerId: req.user._id });
-    if (!toStore) return res.status(403).json({ message: 'You are not authorized to approve for this store' });
+    if (!redistribution) {
+      return res.status(404).json({ message: 'Redistribution not found' });
+    }
 
-    // Find product in the toStore
-    const product = await Product.findOne({ _id: redistribution.productId._id, storeId: toStore._id });
-    if (!product) return res.status(404).json({ message: 'Product not found in your store' });
+    // ✅ Validate that the approver is manager of the fromStore (sender)
+    const managerId = redistribution.toStore.managerId?._id?.toString();
+    const currentUserId = req.user._id.toString();
+    console.log('Logged-in user:', req.user._id);
+    console.log('Redistribution fromStore managerId:', redistribution.fromStore.managerId?._id || redistribution.fromStore.managerId);
+    console.log('Redistribution toStore managerId:', redistribution.toStore.managerId?._id || redistribution.toStore.managerId);
+
+    if (managerId !== currentUserId) {
+      return res.status(403).json({ message: 'You are not authorized to approve for this store' });
+    }
+
+    // ✅ Find product in fromStore
+    const product = await Product.findOne({
+      _id: redistribution.productId._id,
+      storeId: redistribution.fromStore._id
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found in your store' });
+    }
 
     if (product.stockQuantity < redistribution.quantity) {
       return res.status(400).json({ message: 'Not enough stock in your store to transfer' });
     }
 
-    // Deduct stock from toStore
+    // ✅ Deduct stock from fromStore
     product.stockQuantity -= redistribution.quantity;
     await product.save();
 
-    // Reduce forecast demand in fromStore
-    const forecast = await Forecast.findOne({ productId: product._id, storeId: redistribution.fromStore._id });
-    if (forecast) {
-      // Reduce demand for the nearest date
-      let changed = false;
-      for (const demand of forecast.dailyDemand) {
-        if (demand.predictedUnits >= redistribution.quantity) {
-          demand.predictedUnits -= redistribution.quantity;
-          changed = true;
-          break;
-        }
-      }
-
-      if (!changed && forecast.dailyDemand.length) {
-        forecast.dailyDemand[0].predictedUnits = Math.max(0, forecast.dailyDemand[0].predictedUnits - redistribution.quantity);
-      }
-
-      forecast.dailyDemand = forecast.dailyDemand.filter(d => d.predictedUnits > 0);
-      if (forecast.dailyDemand.length === 0) {
-        await Forecast.findByIdAndDelete(forecast._id);
-      } else {
-        await forecast.save();
-      }
-    }
+    // ❌ Not updating forecast (as per your current preference)
 
     redistribution.approvedBy = req.user._id;
     await redistribution.save();
 
     res.json({ message: 'Redistribution approved', redistribution });
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 export const rejectRedistribution = async (req, res) => {
   try {
     const redistribution = await Redistribution.findById(req.params.id);
     if (!redistribution) return res.status(404).json({ message: 'Redistribution not found' });
 
-    const toStore = await Store.findOne({ _id: redistribution.toStore, managerId: req.user._id });
-    if (!toStore) return res.status(403).json({ message: 'You are not authorized to reject for this store' });
+    // ✅ Ensure manager belongs to fromStore (sender)
+    const fromStore = await Store.findOne({ _id: redistribution.fromStore, managerId: req.user._id });
+    if (!fromStore) return res.status(403).json({ message: 'You are not authorized to reject for this store' });
 
     await Redistribution.findByIdAndDelete(redistribution._id);
 
@@ -425,3 +430,30 @@ export const rejectRedistribution = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+
+export const getManagerRedistributions = async (req, res) => {
+  try {
+    const store = await Store.findOne({ managerId: req.user._id });
+    if (!store) return res.status(404).json({ message: 'Store not found' });
+
+    const redistributions = await Redistribution.find({
+      $or: [{ fromStore: store._id }, { toStore: store._id }]
+    })
+      .populate('productId fromStore approvedBy')
+      .populate({
+        path: 'toStore',
+        populate: {
+          path: 'managerId',
+          select: '_id name email'
+        }
+      });
+
+    res.json({ redistributions, currentStoreId: store._id.toString() });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+

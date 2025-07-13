@@ -7,8 +7,9 @@ import connectDB from "./config/db.js";
 import adminRoutes from './routes/adminRoutes.js';
 import managerRoutes from './routes/managerRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
-import cron from 'node-cron';
-import updateProductStatusAndDiscounts from "./cron/updateProductStatus.js";
+import autoRedistribute from "./cron/autoRedistribute.js";
+// import cron from 'node-cron';
+// import updateProductStatusAndDiscounts from "./cron/updateProductStatus.js";
 
 dotenv.config();
 
@@ -41,6 +42,12 @@ cron.schedule("0 1 * * *", async () => {
   console.log("[CRON] Running daily product update job...");
   await updateProductStatusAndDiscounts();
 });
+
+cron.schedule('*/1 * * * *', async () => {
+  console.log('[CRON] Running every minute...');
+  await autoRedistribute(); // ✅ For testing
+});
+
 // updateProductStatusAndDiscounts()
 const PORT = process.env.PORT || 5000;
 

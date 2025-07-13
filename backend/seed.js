@@ -10,6 +10,7 @@ import Admin from './models/Admin.js';
 import Product from './models/Product.js';
 import bcrypt from 'bcryptjs';
 import connectDB from './config/db.js';
+import Forecast from './models/Forecast.js';
 
 const seed = async () => {
   try {
@@ -22,6 +23,8 @@ const seed = async () => {
     await Return.deleteMany();
     await Admin.deleteMany();
     await Product.deleteMany();
+    await Forecast.deleteMany();
+
 
     // Create Admin
     const admin = await Admin.create({
@@ -131,8 +134,37 @@ const seed = async () => {
       });
     }
 
-    await Product.insertMany(products);
+    const savedProducts = await Product.insertMany(products);
     console.log("✅ 100 Products seeded");
+
+    const forecastEntries = [];
+
+for (let i = 0; i < savedProducts.length; i++) {
+  const product = savedProducts[i];
+  const productStoreId = product.storeId.toString();
+
+  // Assign demand forecast to a different store (to simulate imbalance)
+  for (const store of stores) {
+    if (store._id.toString() !== productStoreId) {
+      forecastEntries.push({
+        productId: product._id,
+        storeId: store._id,
+        dailyDemand: [
+          {
+            date: new Date(),
+            predictedUnits: Math.floor(Math.random() * 10) + 1,
+          },
+        ],
+        createdAt: new Date(),
+      });
+      break; // one forecast per product is enough
+    }
+  }
+}
+
+await Forecast.insertMany(forecastEntries);
+console.log(`✅ ${forecastEntries.length} Forecasts seeded`);
+
 
     console.log('✅ Seed data inserted successfully');
     process.exit();
@@ -141,5 +173,6 @@ const seed = async () => {
     process.exit(1);
   }
 };
+
 
 seed();

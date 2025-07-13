@@ -1,7 +1,5 @@
 // utils/auth.js
-import { jwtDecode } from 'jwt-decode';
-
-
+import jwtDecode from 'jwt-decode';
 
 export const getCurrentUser = () => {
   const token = localStorage.getItem('token');

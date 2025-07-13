@@ -18,7 +18,8 @@ import {
   getReturnsForMyStore,
     requestRedistribution,
     approveRedistribution,
-    rejectRedistribution
+    rejectRedistribution,
+    getManagerRedistributions
 } from '../controllers/managerController.js';
 
 const router = express.Router();
@@ -50,6 +51,6 @@ router.patch('/forecasts/:forecastId/reduce-demand', protectManager, reduceForec
 router.post('/redistributions', protectManager, requestRedistribution);
 router.put('/redistributions/:id/approve', protectManager, approveRedistribution);
 router.put('/redistributions/:id/reject', protectManager, rejectRedistribution);
-
+router.get('/redistributions', protectManager, getManagerRedistributions);
 
 export default router;
