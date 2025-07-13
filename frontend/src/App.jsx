@@ -6,12 +6,12 @@ import AuthPage from './AuthPage'
 import CustomerReturnDashboard from './customer/returnPage';
 import Products from './customer/products';
 import AdminDashboard from './admin/AdminDashboard';
-import ManagerDashboard from './manager/ManagerDashboard';
+import ManagerDashboard from './Manager/ManagerDashboard';
 import ReturnsPage from './manager/ReturnsPage';
-import RedistributionPage from './manager/RedistributionPage';
+import RedistributionPage from './Manager/RedistributionPage';
+import ManagerReturnDashboard from './Manager/ManagerReturnDashboard';
 
 function App() {
-  const [count, setCount] = useState(0)
 
   return (
     <>
@@ -23,7 +23,7 @@ function App() {
         <Route path="/customer/returns" element={<CustomerReturnDashboard/>} />
         <Route path="/admin/dashboard" element={<AdminDashboard/>} />
         <Route path="/manager/dashboard" element={<ManagerDashboard/>} />
-        <Route path="/manager/returns" element={<ReturnsPage/>} />
+        <Route path="/manager/returns" element={<ManagerReturnDashboard/>} />
         <Route path="/manager/redistributions" element={<RedistributionPage/>} />
       </Routes>
     </BrowserRouter>

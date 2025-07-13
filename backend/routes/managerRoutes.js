@@ -20,7 +20,8 @@ import {
     approveRedistribution,
     rejectRedistribution,
     getNeededForecasts,
-    getIncomingRedistributions
+    getIncomingRedistributions,
+    getStoreProfile
 } from '../controllers/managerController.js';
 
 const router = express.Router();
@@ -32,6 +33,7 @@ router.post('/login', loginManager);
 
 // Manager-only endpoints
 router.get('/profile', protectManager, getManagerProfile);
+router.get('/store-profile', protectManager, getStoreProfile);
 router.put('/profile', protectManager, updateManagerProfile);
 
 router.get('/store', protectManager, getMyStore);

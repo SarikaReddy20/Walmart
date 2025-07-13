@@ -16,7 +16,10 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // frontend origin
+  credentials: true               // allow cookies to be sent
+}));
 app.use(express.json());
 app.use('/api/admin', adminRoutes);
 app.use('/api/manager', managerRoutes);

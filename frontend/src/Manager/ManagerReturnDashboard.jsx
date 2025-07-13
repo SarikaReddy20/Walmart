@@ -18,7 +18,6 @@ const ManagerReturnDashboard = () => { // Provide a default mock token for demo
       const res = await axios.get('http://localhost:5000/api/manager/returns/pending', {
         headers: { Authorization: `Bearer ${token}` }, // Send JWT for authentication/authorization
       });
-      console.log(res,"resma")
       // Update state with fetched returns. Backend is expected to send 'returns' array.
       setReturns(res.data?.returns || []);
     } catch (error) {

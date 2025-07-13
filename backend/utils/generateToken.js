@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 const generateToken = (id, role) => {
+  console.log(role)
   return jwt.sign(
     { id, role },
     process.env.JWT_SECRET,

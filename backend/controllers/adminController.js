@@ -126,7 +126,7 @@ export const loginAdmin = async (req, res) => {
       _id: admin._id,
       fullName: admin.fullName,
       email: admin.email,
-      token: generateToken(admin._id)
+      token: generateToken(admin._id,"admin")
     });
   } else {
     res.status(401).json({ message: 'Invalid credentials' });
