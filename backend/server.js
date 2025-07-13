@@ -7,8 +7,6 @@ import connectDB from "./config/db.js";
 import adminRoutes from './routes/adminRoutes.js';
 import managerRoutes from './routes/managerRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
-import cron from 'node-cron';
-import updateProductStatusAndDiscounts from "./cron/updateProductStatus.js";
 
 dotenv.config();
 
