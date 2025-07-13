@@ -20,7 +20,7 @@ export const loginManager = async (req, res) => {
       fullName: manager.fullName,
       email: manager.email,
       profilePic: manager.profilePic,
-      token: generateToken(manager._id)
+      token: generateToken(manager._id,"manager")
     });
   } else {
     res.status(401).json({ message: 'Invalid credentials' });
@@ -31,12 +31,18 @@ export const loginManager = async (req, res) => {
 
 // GET /api/manager/profile
 export const getManagerProfile = async (req, res) => {
+  console.log(req.user)
   res.json({
     _id: req.user._id,
     fullName: req.user.fullName,
     email: req.user.email,
     profilePic: req.user.profilePic
   });
+};
+export const getStoreProfile = async (req, res) => {
+  const store = await Store.findOne({ managerId: req.user._id });
+  if (!store) return res.status(404).json({ message: 'Store not found for this manager' });
+  res.json(store);
 };
 
 // PUT /api/manager/profile
@@ -475,4 +481,3 @@ export const getNeededForecasts = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-

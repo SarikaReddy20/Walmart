@@ -4,7 +4,7 @@ import {
   getStores,
   updateStoreAndManager,
   deleteStoreAndManager,
-  loginAdmin
+  loginAdmin,
 } from '../controllers/adminController.js';
 
 import { protectAdmin } from '../middleware/authMiddleware.js';
